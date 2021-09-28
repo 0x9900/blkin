@@ -1,0 +1,5 @@
+# Rename this file into wificonfig.py
+# Complete with your credentials
+
+SSID='wifi ssid'
+PASSWORD='wifi password'

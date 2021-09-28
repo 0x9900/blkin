@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hot Water Pump</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link href="/style.min.css" rel="stylesheet">
+    <link rel="icon" href="data:*">
+  </head>
+  <body onload="monitor()">
+    <h1>Hot Water Pump</h1>
+    <div>
+      <img id="pumpicn" src="/pump-off.png">
+    </div>
+    <hr>
+    <div class="radio">
+      <label class="container">On <input id="on" type="radio" name="radio" onclick='on()'><span class="checkmark"></span></label>
+      <label class="container">Off <input id="off" type="radio" name="radio" onclick='off()'><span class="checkmark"></span></label>
+      <label class="container">Auto <input id="auto" type="radio" checked="checked" name="radio" onclick='auto()'><span class="checkmark"></span></label>
+    </div>
+    <hr>
+    <div id="time" class="time"></div>
+    <div class="buttons">
+      <button id="reset" class="reset" onclick="reboot()">Reboot</button>
+    </div>
+    <hr>
+    <address>
+      This Belkin controller is written in <a href="https://micropython.org/download/esp8266/">MicroPython</a></br>
+      running on an <a href="https://www.amazon.com/s?k=esp8266">ESP8266</a>
+    </address>
+    <script type="text/javascript">
+      function on() {
+	  var onCall = '/api/v1/on';
+	  $.getJSON(onCall)
+	      .done(function(data) {processData(data);})
+	      .fail(function(jqxhr, textStatus, error) { alert(error);})
+      }
+      function off() {
+	  var onCall = '/api/v1/off';
+	  $.getJSON(onCall)
+	      .done(function(data) {processData(data);})
+	      .fail(function(jqxhr, textStatus, error) { alert(error);})
+      }
+      function auto() {
+	  var onCall = '/api/v1/auto';
+	  $.getJSON(onCall)
+	      .done(function(data) {processData(data);})
+	      .fail(function(jqxhr, textStatus, error) { alert(error);})
+      }
+      function reboot() {
+	  var response = confirm("Do you want to reboot switch?");
+	  if (response == true) {
+	      var rebootPath = "/api/v1/reboot";
+	      $.getJSON(rebootPath)
+		  .done(function(data) {alert('System reboot');})
+		  .fail(function(jqxhr, textStatus, error) {alert(error);})
+	  }
+      }
+      function showEnv() {
+	  var envCall = "/api/v1/status";
+	  $.getJSON(envCall)
+	      .done(function(data) {processData(data);})
+      }
+      function processData(data) {
+	  console.log(data);
+	  $("#time").html(data['time']);
+	  if(data["forced"] == true && data["switch"] == 0) {
+	      $("#off").prop('checked', true);
+	  } else if(data["forced"] == true && data["switch"] == 1) {
+	      $("#on").prop('checked', true);
+	  } else if (data["forced"] == false) {
+	      $("#auto").prop('checked', true);
+	  }
+	  if(data["switch"] == 0) {
+	      $("#pumpicn").attr("src", "/pump-off.png");
+	  } else {
+	      $("#pumpicn").attr("src", "/pump-on.png");
+	  }
+      }
+      function monitor() {
+	  showEnv();
+	  setTimeout(monitor, 5000);
+      }
+      </script>
+  </body>
+</html>

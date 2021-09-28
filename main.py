@@ -1,0 +1,3 @@
+#
+import belkin
+belkin.main()
