@@ -28,4 +28,4 @@ This is the WeMo Switch with the ESP8266 D1 mini board installed.
 
 Screen shot of the web interface.
 
-<img src="misc/ScreenShot.jpeg" raw=true alt="ScreenShot" style="width: 520px;" />
+![ScreenShot](misc/ScreenShot.jpeg)

@@ -2,8 +2,10 @@
 # (c) W6BSD Fred Cirera
 #
 
+import ds18x20
 import gc
 import network
+import onewire
 import os
 import time
 import uasyncio as asyncio
@@ -48,7 +50,7 @@ MIME_TYPES = {
   b'png': 'image/png',
 }
 
-FORCE_ON_TIMEOUT = 180
+FORCE_TEMP = 47.0
 
 # (date(2000, 1, 1) - date(1900, 1, 1)).days * 24*60*60
 NTP_DELTA = 3155673600
@@ -124,13 +126,40 @@ class Relay:
     return self.pin.value(0)
 
 
+class DS1820:
+
+  def __init__(self, *args, **kwargs):
+    self.pin = Pin(*args, **kwargs)
+    self.sensor = ds18x20.DS18X20(onewire.OneWire(self.pin))
+    self.temp = 0
+    self.lastread = 0
+    roms = self.sensor.scan()
+    if not roms:
+      LOG.error('DS sensor not found')
+      return
+
+    self.rom = roms[0]
+    LOG.info('Found DS devices: %s', self.rom)
+
+  async def update(self):
+    while True:
+      self.sensor.convert_temp()
+      await asyncio.sleep_ms(750)
+      self.temp = self.sensor.read_temp(self.rom)
+      await asyncio.sleep(10)
+
+  def read(self):
+    return self.temp
+
+
 class Server:
 
-  def __init__(self, switch, addr='0.0.0.0', port=80):
+  def __init__(self, switch, temp, addr='0.0.0.0', port=80):
     self.addr = addr
     self.port = port
     self.open_socks = []
     self.switch = switch
+    self.temp = temp
     self._files = [bytes('/' + f, 'utf-8') for f in os.listdir('html')]
 
   async def run(self, loop):
@@ -212,6 +241,7 @@ class Server:
     data['time'] = "{:02d}:{:02d}".format(*time.localtime()[3:5])
     data['forced'] = self.switch.forced;
     data['switch'] = self.switch.value()
+    data['temp'] = self.temp.read()
     return data
 
   async def send_json(self, wfd, data):
@@ -318,12 +348,15 @@ async def update_rtc():
     settime()
 
 
-async def monitor(switch):
+async def monitor(switch, temp):
   while True:
     if switch.forced and switch.value() == 1:
-      await asyncio.sleep(FORCE_ON_TIMEOUT)
-      switch.forced = False
-      switch.off()
+      while True:
+        await asyncio.sleep(5)
+        if temp.read() > FORCE_TEMP:
+          switch.forced = False
+          switch.off()
+          break
     else:
       # 3019 – super-prime, happy prime
       await asyncio.sleep_ms(3019)
@@ -339,6 +372,8 @@ async def heartbeat():
 
 def main():
   switch = Relay(2, Pin.OUT, value=1)
+  ds1820 = DS1820(0, Pin.IN, Pin.PULL_UP)
+
   wifi = wifi_connect(wc.SSID, wc.PASSWORD)
   settime()
 
@@ -359,11 +394,12 @@ def main():
   LOG.info('Last chance to press [^C]')
   time.sleep(4)
   LOG.info('Start server')
-  server = Server(switch)
+  server = Server(switch, ds1820)
   loop = asyncio.get_event_loop()
-  loop.create_task(monitor(switch))
+  loop.create_task(ds1820.update())
   loop.create_task(heartbeat())
   loop.create_task(update_rtc())
+  loop.create_task(monitor(switch, ds1820))
   loop.create_task(automation(tm_on, switch))
   loop.create_task(server.run(loop))
 
