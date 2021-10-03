@@ -18,6 +18,8 @@ minutes, just enough time to bring the hot water into the pipes.
 
 ![WeMo](misc/IMG_0851.JPG)
 
+This shows the Belkin Switch with the temperature sensor coming from the side
+
 <hr>
 
 This is the WeMo Switch with the ESP8266 D1 mini board installed.
