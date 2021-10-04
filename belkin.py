@@ -141,14 +141,11 @@ class DS1820:
     self.rom = roms[0]
     LOG.info('Found DS devices: %s', self.rom)
 
-  async def update(self):
-    while True:
-      self.sensor.convert_temp()
-      await asyncio.sleep_ms(750)
-      self.temp = self.sensor.read_temp(self.rom)
-      await asyncio.sleep(10)
-
-  def read(self):
+  async def read(self):
+    LOG.info('Read DS1820 temp')
+    self.sensor.convert_temp()
+    await asyncio.sleep_ms(750)
+    self.temp = self.sensor.read_temp(self.rom)
     return self.temp
 
 
@@ -241,7 +238,7 @@ class Server:
     data['time'] = "{:02d}:{:02d}".format(*time.localtime()[3:5])
     data['forced'] = self.switch.forced;
     data['switch'] = self.switch.value()
-    data['temp'] = self.temp.read()
+    data['temp'] = await self.temp.read()
     return data
 
   async def send_json(self, wfd, data):
@@ -318,17 +315,26 @@ def wifi_connect(ssid, password):
   ap_if.active(False)
   sta_if = network.WLAN(network.STA_IF)
   if not sta_if.isconnected():
-    LOG.info('Connecting to WiFi...')
     sta_if.active(True)
     sta_if.connect(ssid, password)
-    while not sta_if.isconnected():
-      time.sleep(1)
+    for cnd in range(10):
+      LOG.info('Connecting to WiFi...')
+      if sta_if.isconnected():
+        break
+      time.sleep(3)
+    if not sta_if.isconnected():
+      LOG.error('Wifi connection error sleeping for 30 second before reboot')
+      time.sleep(30)
+      reset()
+
   LOG.info('Network config: %s', sta_if.ifconfig())
   gc.collect()
   return sta_if
 
 
 async def automation(tm_on, switch):
+  # If the current hour/min is in the tm_on set the realy
+  # is closed else the relay is open.
   while True:
     await asyncio.sleep_ms(5000)
     if switch.forced:
@@ -343,31 +349,26 @@ async def automation(tm_on, switch):
 
 
 async def update_rtc():
+  # The RTC in the ESP is fairly stable we re-sync with the ntp servers every 12 hours.
   while True:
-    await asyncio.sleep(1800)
+    await asyncio.sleep(43200)
     settime()
 
 
 async def monitor(switch, temp):
   while True:
-    if switch.forced and switch.value() == 1:
-      while True:
-        await asyncio.sleep(5)
-        if temp.read() > FORCE_TEMP:
-          switch.forced = False
-          switch.off()
-          break
-    else:
-      # 3019 – super-prime, happy prime
-      await asyncio.sleep_ms(3019)
+    if switch.forced and switch.value() == 1 and await temp.read() < FORCE_TEMP:
+      switch.forced = False
+      switch.off()
+    await asyncio.sleep_ms(10061)  # 10061 – super-prime, happy prime (10sec)
 
 
 async def heartbeat():
-  speed = 1500
+  feed_time = 1500
   wdt = WDT()
   while True:
     wdt.feed()
-    await asyncio.sleep_ms(speed)
+    await asyncio.sleep_ms(feet_time)
 
 
 def main():
@@ -396,7 +397,6 @@ def main():
   LOG.info('Start server')
   server = Server(switch, ds1820)
   loop = asyncio.get_event_loop()
-  loop.create_task(ds1820.update())
   loop.create_task(heartbeat())
   loop.create_task(update_rtc())
   loop.create_task(monitor(switch, ds1820))
