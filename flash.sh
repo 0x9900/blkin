@@ -8,7 +8,7 @@ delay() {
 
 ~/bin/cssmin -f html/style.css
 
-#/opt/local/bin/ampy -d 1 put times.dat
+/opt/local/bin/ampy -d 1 put times.dat
 
 #delay && /opt/local/bin/ampy -d 1 mkdir lib
 #delay && /opt/local/bin/ampy -d 1 mkdir html
@@ -16,8 +16,8 @@ delay() {
 #delay && /opt/local/bin/ampy -d 1 put html/pump-off.png html/pump-off.png
 #delay && /opt/local/bin/ampy -d 1 put main.py
 
-#delay && /opt/local/bin/ampy -d 1 put html/index.html html/index.html
-#delay && /opt/local/bin/ampy -d 1 put html/style.min.css html/style.min.css
+delay && /opt/local/bin/ampy -d 1 put html/index.html html/index.html
+delay && /opt/local/bin/ampy -d 1 put html/style.min.css html/style.min.css
 
 #mpy-cross lib/logging.py
 #delay && /opt/local/bin/ampy -d 1 put lib/logging.mpy lib/logging.mpy

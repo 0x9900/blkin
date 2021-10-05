@@ -50,7 +50,7 @@ MIME_TYPES = {
   b'png': 'image/png',
 }
 
-FORCE_TEMP = 47.0
+FORCE_TEMP = 46.0
 
 # (date(2000, 1, 1) - date(1900, 1, 1)).days * 24*60*60
 NTP_DELTA = 3155673600
@@ -60,31 +60,30 @@ def get_ntp_time(host):
   NTP_QUERY[0] = 0x1b
   addr = socket.getaddrinfo(host, 123)[0][-1]
   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  s.settimeout(4)
-  res = s.sendto(NTP_QUERY, addr)
-  msg = s.recv(48)
-  s.close()
+  s.settimeout(2)
+  try:
+    res = s.sendto(NTP_QUERY, addr)
+    msg = s.recv(res)
+  finally:
+    s.close()
+
   val = struct.unpack("!I", msg[40:44])[0]
   return val - NTP_DELTA
+
 
 # There's currently no timezone support in MicroPython, so
 # time.localtime() will return UTC time (as if it was .gmtime())
 # add timezone org, default -7 for California
 def settime(timezone=-7, server='us.pool.ntp.org'):
-  t1= time.ticks_ms()
-  while True:
-    if time.ticks_diff(time.ticks_ms(), t1) > 5000:
-      raise OSError('Timeout,ntp server not response.')
-    try:
-      t = get_ntp_time(server)
-    except OSError:
-      pass
-    else:
-      break
-  t = t + (timezone * 60 * 60)
-  tm = time.localtime(t)
-  tm = tm[0:3] + (0, ) + tm[3:6] + (0, )
-  RTC().datetime(tm)
+  try:
+    time_ntp = get_ntp_time(server)
+  except OSError:
+    LOG.warning("Error fetching NTP time")
+    return
+
+  time_ntp = time_ntp + (timezone * 60 * 60)
+  tm = time.localtime(time_ntp)
+  RTC().datetime((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
 
 
 def parse_headers(head_lines):
@@ -349,15 +348,16 @@ async def automation(tm_on, switch):
 
 
 async def update_rtc():
-  # The RTC in the ESP is fairly stable we re-sync with the ntp servers every 12 hours.
+  # Re-sync the micro-controller internal RTC with NTP every hours.
+  settime()
   while True:
-    await asyncio.sleep(43200)
+    await asyncio.sleep(1823)
     settime()
 
 
 async def monitor(switch, temp):
   while True:
-    if switch.forced and switch.value() == 1 and await temp.read() < FORCE_TEMP:
+    if switch.forced and switch.value() == 1 and await temp.read() > FORCE_TEMP:
       switch.forced = False
       switch.off()
     await asyncio.sleep_ms(10061)  # 10061 – super-prime, happy prime (10sec)
@@ -368,15 +368,13 @@ async def heartbeat():
   wdt = WDT()
   while True:
     wdt.feed()
-    await asyncio.sleep_ms(feet_time)
+    await asyncio.sleep_ms(feed_time)
 
 
 def main():
   switch = Relay(2, Pin.OUT, value=1)
   ds1820 = DS1820(0, Pin.IN, Pin.PULL_UP)
-
   wifi = wifi_connect(wc.SSID, wc.PASSWORD)
-  settime()
 
   tm_on = []
   try:
@@ -397,11 +395,11 @@ def main():
   LOG.info('Start server')
   server = Server(switch, ds1820)
   loop = asyncio.get_event_loop()
-  loop.create_task(heartbeat())
   loop.create_task(update_rtc())
-  loop.create_task(monitor(switch, ds1820))
+  loop.create_task(heartbeat())
   loop.create_task(automation(tm_on, switch))
   loop.create_task(server.run(loop))
+  loop.create_task(monitor(switch, ds1820))
 
   try:
     loop.run_forever()
