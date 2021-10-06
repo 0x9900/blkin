@@ -1,77 +1,80 @@
 #
 # Times slots for the recirculating pump
 #
+# Early morning break fast.
 0600
 0601
 0602
 0603
 0604
 
+# Morning
+0700
 0701
 0702
-
+0703
+0704
+# Keep water hot
+0710
+0720
 0730
-0731
-0732
+0740
+0750
 
-0745
-
+# Before my shower my time
 0800
-
-0815
-
+0801
+0802
+0803
+# Maintain hot water in the pipes
+0810
+0820
 0830
-0831
-0832
-0834
+0840
+0850
 
-0845
-
+# Before wife's shower time
 0900
 0901
 0902
 0904
-
-0915
-
+# Maintain hot water in the pipes
+0910
+0920
 0930
 0931
 
-0945
-
+# Before Noon
+1145
+1146
+1147
+1148
+# Noon maintain hot water
 1200
-1201
-1202
-1203
-
+1210
+1220
 1230
-1231
-1232
+1240
+1250
 
-1300
-1301
-
+# Evening
 1850
 1851
 1852
 1853
-
+# Evening maintain hot water
+1910
 1920
-
 1930
-
 1940
-
 1950
-
 2000
-
 2010
 
+# Before bed time
 2230
 2231
 2232
-
+# Maintain
 2240
-
 2250
