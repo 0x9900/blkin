@@ -132,16 +132,21 @@ class DS1820:
     self.sensor = ds18x20.DS18X20(onewire.OneWire(self.pin))
     self.temp = 0
     self.lastread = 0
+    self.rom = None
     roms = self.sensor.scan()
     if not roms:
-      LOG.error('DS sensor not found')
+      LOG.error('DS1820 sensor not found')
       return
 
     self.rom = roms[0]
     LOG.info('Found DS devices: %s', self.rom)
 
   async def read(self):
-    LOG.info('Read DS1820 temp')
+    if not self.rom:
+      LOG.warning('DS1820 sensor not found')
+      return 0.0
+
+    LOG.debug('Read DS1820 temp')
     self.sensor.convert_temp()
     await asyncio.sleep_ms(750)
     self.temp = self.sensor.read_temp(self.rom)
@@ -172,13 +177,13 @@ class Server:
     while True:
       if poller.poll(1):  # 1ms
         c_sock, addr = s_sock.accept()  # get client socket
-        LOG.info('Connection from %s:%d', *addr)
+        LOG.debug('Connection from %s:%d', *addr)
         loop.create_task(self.process_request(c_sock))
         gc.collect()
       await asyncio.sleep_ms(100)
 
   async def process_request(self, sock):
-    LOG.info('Process request %s', sock)
+    LOG.debug('Process request %s', sock)
     self.open_socks.append(sock)
     sreader = asyncio.StreamReader(sock)
     swriter = asyncio.StreamWriter(sock, '')
@@ -197,7 +202,7 @@ class Server:
         LOG.debug('Empty request')
         raise OSError
 
-      LOG.info('Request %s %s', headers[b'Method'].decode(), uri.decode())
+      LOG.debug('Request %s %s', headers[b'Method'].decode(), uri.decode())
       if uri == b'/api/v1/status':
         data = await self.get_state()
         await self.send_json(swriter, data)
@@ -331,17 +336,17 @@ def wifi_connect(ssid, password):
   return sta_if
 
 
-async def automation(tm_on, switch):
+async def automation(tm_on, switch, temp):
   # If the current hour/min is in the tm_on set the realy
   # is closed else the relay is open.
   while True:
-    await asyncio.sleep_ms(5000)
+    await asyncio.sleep_ms(10061)
     if switch.forced:
       continue
     t = time.localtime()
     hour, min = t[3:5]
     key = int("{:d}{:02d}".format(hour, min))
-    if key in tm_on:
+    if key in tm_on and await temp.read() < FORCE_TEMP:
       switch.on()
     else:
       switch.off()
@@ -397,7 +402,7 @@ def main():
   loop = asyncio.get_event_loop()
   loop.create_task(update_rtc())
   loop.create_task(heartbeat())
-  loop.create_task(automation(tm_on, switch))
+  loop.create_task(automation(tm_on, switch, ds1820))
   loop.create_task(server.run(loop))
   loop.create_task(monitor(switch, ds1820))
 
