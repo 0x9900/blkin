@@ -8,3 +8,5 @@ wificonfig.py
 /dist/
 scratch_pad.py
 html/_index.html
+screenlog.*
+update.py
