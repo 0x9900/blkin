@@ -50,7 +50,7 @@ MIME_TYPES = {
   b'png': 'image/png',
 }
 
-FORCE_TEMP = 46.0
+FORCE_TEMP = 45.0
 
 # (date(2000, 1, 1) - date(1900, 1, 1)).days * 24*60*60
 NTP_DELTA = 3155673600
