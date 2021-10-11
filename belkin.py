@@ -358,6 +358,7 @@ async def update_rtc():
   while True:
     await asyncio.sleep(1823)
     settime()
+    gc.collect()
 
 
 async def monitor(switch, temp):
