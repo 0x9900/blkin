@@ -352,12 +352,12 @@ async def automation(tm_on, switch, temp):
       switch.off()
 
 
-async def update_rtc():
+async def update_rtc(tzone):
   # Re-sync the micro-controller internal RTC with NTP every hours.
-  settime()
+  settime(timezone=tzone)
   while True:
     await asyncio.sleep(1823)
-    settime()
+    settime(timezone=tzone)
     gc.collect()
 
 
@@ -376,34 +376,44 @@ async def heartbeat():
     wdt.feed()
     await asyncio.sleep_ms(feed_time)
 
+def parse_dat(filename):
+  sched_data = {
+    'tz': -7,
+    'tm_on': []
+  }
+  try:
+    with open(filename) as fd:
+      for line in fd:
+        line = line.rstrip()
+        if not line or line.startswith('#'):
+          continue
+        elif line.startswith('@timezone'):
+          _, value = line.split()
+          sched_data['tz'] = int(value)
+        else:
+          sched_data['tm_on'].append(int(line))
+  except Exception as err:
+    LOG.info('No scheduling "time.dat" file read error %s', err)
+    time.sleep(300)
+  else:
+    LOG.info(sched_data)
+
+  return sched_data
 
 def main():
   switch = Relay(2, Pin.OUT, value=1)
   ds1820 = DS1820(0, Pin.IN, Pin.PULL_UP)
   wifi = wifi_connect(wc.SSID, wc.PASSWORD)
 
-  tm_on = []
-  try:
-    with open('times.dat') as fd:
-      for line in fd:
-        line = line.rstrip()
-        if not line or line.startswith('#'):
-          continue
-        tm_on.append(int(line))
-  except Exception as err:
-    LOG.info('No scheduling "time.dat" file read error %s', err)
-    time.sleep(300)
-  else:
-    LOG.info(tm_on)
-
+  sched_data = parse_dat('times.dat')
   LOG.info('Last chance to press [^C]')
   time.sleep(4)
   LOG.info('Start server')
   server = Server(switch, ds1820)
   loop = asyncio.get_event_loop()
-  loop.create_task(update_rtc())
+  loop.create_task(update_rtc(sched_data['tz']))
   loop.create_task(heartbeat())
-  loop.create_task(automation(tm_on, switch, ds1820))
+  loop.create_task(automation(sched_data['tm_on'], switch, ds1820))
   loop.create_task(server.run(loop))
   loop.create_task(monitor(switch, ds1820))
 
