@@ -376,6 +376,7 @@ async def heartbeat():
     wdt.feed()
     await asyncio.sleep_ms(feed_time)
 
+
 def parse_dat(filename):
   global MAX_TEMP
   sched_data = {
@@ -383,43 +384,56 @@ def parse_dat(filename):
     'tm_on': []
   }
 
-  def _int(val, default):
+  def _int(value, default):
     try:
       return int(value)
     except ValueError as err:
-      LOG.warning(err)
-      return default
+      pass
+    return default
 
   try:
+    line_no = 0
     with open(filename) as fd:
       for line in fd:
+        line_no += 1
         line = line.rstrip()
         if not line or line.startswith('#'):
           continue
-        elif line.startswith('@maxtemp'):
+        if line.startswith('@maxtemp'):
           _, value = line.split()
           MAX_TEMP = _int(value, MAX_TEMP)
+          LOG.info('Max temp: %d', MAX_TEMP)
         elif line.startswith('@timezone'):
           _, value = line.split()
           sched_data['tz'] = _int(value, -7)
+          LOG.info('Time zone: %d', sched_data['tz'])
         else:
-          sched_data['tm_on'].append(int(line))
+          value = _int(line, -1)
+          if value < 0:
+            LOG.info('Value error: %s line: %d', line, line_no)
+          else:
+            sched_data['tm_on'].append(value)
   except Exception as err:
     LOG.info('No scheduling "time.dat" file read error %s', err)
     time.sleep(300)
-  else:
-    LOG.info(sched_data)
 
+  LOG.info(sched_data['tm_on'])
   return sched_data
 
 def main():
+  wifi = wifi_connect(wc.SSID, wc.PASSWORD)
+  try:
+    import update
+    update.timesfile()
+  except:
+    print("Update error")
+
   switch = Relay(2, Pin.OUT, value=1)
   ds1820 = DS1820(0, Pin.IN, Pin.PULL_UP)
-  wifi = wifi_connect(wc.SSID, wc.PASSWORD)
 
   sched_data = parse_dat('times.dat')
   LOG.info('Last chance to press [^C]')
-  time.sleep(4)
+  time.sleep(7)
   LOG.info('Start server')
   server = Server(switch, ds1820)
   loop = asyncio.get_event_loop()
