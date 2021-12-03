@@ -50,7 +50,7 @@ MIME_TYPES = {
   b'png': 'image/png',
 }
 
-FORCE_TEMP = 45.0
+MAX_TEMP = 40.0
 
 # (date(2000, 1, 1) - date(1900, 1, 1)).days * 24*60*60
 NTP_DELTA = 3155673600
@@ -346,7 +346,7 @@ async def automation(tm_on, switch, temp):
     t = time.localtime()
     hour, min = t[3:5]
     key = int("{:d}{:02d}".format(hour, min))
-    if key in tm_on and await temp.read() < FORCE_TEMP:
+    if key in tm_on and await temp.read() < MAX_TEMP:
       switch.on()
     else:
       switch.off()
@@ -363,7 +363,7 @@ async def update_rtc(tzone):
 
 async def monitor(switch, temp):
   while True:
-    if switch.forced and switch.value() == 1 and await temp.read() > FORCE_TEMP:
+    if switch.forced and switch.value() == 1 and await temp.read() > MAX_TEMP:
       switch.forced = False
       switch.off()
     await asyncio.sleep_ms(10061)  # 10061 – super-prime, happy prime (10sec)
@@ -377,19 +377,31 @@ async def heartbeat():
     await asyncio.sleep_ms(feed_time)
 
 def parse_dat(filename):
+  global MAX_TEMP
   sched_data = {
     'tz': -7,
     'tm_on': []
   }
+
+  def _int(val, default):
+    try:
+      return int(value)
+    except ValueError as err:
+      LOG.warning(err)
+      return default
+
   try:
     with open(filename) as fd:
       for line in fd:
         line = line.rstrip()
         if not line or line.startswith('#'):
           continue
+        elif line.startswith('@maxtemp'):
+          _, value = line.split()
+          MAX_TEMP = _int(value, MAX_TEMP)
         elif line.startswith('@timezone'):
           _, value = line.split()
-          sched_data['tz'] = int(value)
+          sched_data['tz'] = _int(value, -7)
         else:
           sched_data['tm_on'].append(int(line))
   except Exception as err:
