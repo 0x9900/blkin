@@ -3,7 +3,7 @@
 #
 # 2021/10/11 10:46
 #
-@maxtemp 42
+@maxtemp 38
 @timezone -8
 #
 # Morning
@@ -11,49 +11,40 @@
 0701
 0702
 0703
-0704
 # Keep water hot
 0710
-0720
+0715
 0730
-0740
-0750
+0745
 
 # Before my shower my time
 0800
 0801
 0802
-0803
+
 # Maintain hot water in the pipes
-0810
-0820
+0815
 0830
-0840
-0850
+0845
 
 # Before wife's shower time
 0900
 0901
 0902
-0904
 # Maintain hot water in the pipes
-0910
-0920
+0915
 0930
-0931
 
 # Before Noon
 1145
 1146
 1147
-1148
 # Noon maintain hot water
 1200
-1210
-1220
+1215
 1230
-1240
-1250
+1245
+1300
 
 # Evening
 1850
@@ -64,10 +55,9 @@
 1910
 1920
 1930
-1940
-1950
+1945
 2000
-2010
+2015
 
 # Before bed time
 2230
