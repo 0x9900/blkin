@@ -10,13 +10,13 @@ delay() {
 
 #delay && /opt/local/bin/ampy -d 1 mkdir lib
 #delay && /opt/local/bin/ampy -d 1 mkdir html
-#delay && /opt/local/bin/ampy -d 1 put html/pump-on.png html/pump-on.png
-#delay && /opt/local/bin/ampy -d 1 put html/pump-off.png html/pump-off.png
+delay && /opt/local/bin/ampy -d 1 put html/pump-on.png html/pump-on.png
+delay && /opt/local/bin/ampy -d 1 put html/pump-off.png html/pump-off.png
 
-#mpy-cross lib/logging.py
-#delay && /opt/local/bin/ampy -d 1 put lib/logging.mpy lib/logging.mpy
-#mpy-cross -v wificonfig.py
-#delay && /opt/local/bin/ampy -d 1 put wificonfig.mpy
+mpy-cross lib/logging.py
+delay && /opt/local/bin/ampy -d 1 put lib/logging.mpy lib/logging.mpy
+mpy-cross -v wificonfig.py
+delay && /opt/local/bin/ampy -d 1 put wificonfig.mpy
 
 delay && /opt/local/bin/ampy -d 1 put main.py
 if [[ -f update.py ]]; then
