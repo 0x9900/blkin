@@ -1,9 +1,9 @@
 #
 # Times slots for the recirculating pump
 #
-# 2021/10/11 10:46
+# 2023/11/08 18:37
 #
-@maxtemp 28
+@maxtemp 38
 @timezone -7
 #
 # Morning
@@ -17,7 +17,7 @@
 0730
 0745
 
-# Before my shower my time
+# Before my shower, my time
 0800
 0801
 0802
